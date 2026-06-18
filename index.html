@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adam Ali Imran — Architecture Portfolio 2026</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --accent:#c9a84c;
+  --cover:#0a0a14;
+  --page:#fafaf7;
+  --text:#1a1a1a;
+  --muted:#888;
+  --border:#e0ddd6;
+  --blue:#1e3a5f;
+  --green:#1a3a28;
+  --ocean:#0d2233;
+}
+body{
+  background:radial-gradient(ellipse at center,#1a1a3a 0%,#080810 100%);
+  font-family:Georgia,serif;
+  height:100vh;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* ── UI bar ── */
+#ui{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 24px;
+  background:rgba(5,5,15,.75);backdrop-filter:blur(10px);
+  border-bottom:1px solid rgba(201,168,76,.15);
+}
+#ui-title{font-size:11px;letter-spacing:3px;color:rgba(255,255,255,.4);font-family:Arial,sans-serif;text-transform:uppercase}
+#ui-right{display:flex;gap:10px;align-items:center}
+.ui-btn{
+  background:none;border:1px solid rgba(255,255,255,.15);
+  color:rgba(255,255,255,.5);padding:5px 14px;cursor:pointer;
+  border-radius:2px;font-size:11px;font-family:Arial,sans-serif;
+  transition:all .2s;letter-spacing:1px;
+}
+.ui-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(201,168,76,.08)}
+#page-indicator{font-size:11px;color:rgba(255,255,255,.3);font-family:Arial,sans-serif;letter-spacing:1px}
+
+/* ── TOC Overlay ── */
+#toc-overlay{
+  position:fixed;inset:0;background:rgba(3,3,12,.96);z-index:200;
+  display:none;align-items:center;justify-content:center;
+}
+#toc-overlay.open{display:flex}
+#toc-panel{
+  background:#0e0e1c;border:1px solid rgba(201,168,76,.2);
+  width:min(560px,90vw);max-height:80vh;overflow-y:auto;
+  padding:48px;position:relative;
+}
+#toc-panel h2{
+  font-size:10px;letter-spacing:5px;color:var(--accent);
+  text-transform:uppercase;font-family:Arial,sans-serif;margin-bottom:36px;
+}
+.toc-row{
+  display:flex;align-items:baseline;gap:10px;padding:13px 0;
+  border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer;
+}
+.toc-row:hover .toc-row-name{color:var(--accent)}
+.toc-row-num{font-size:9px;color:var(--accent);font-family:Arial,sans-serif;min-width:22px}
+.toc-row-name{font-size:12px;letter-spacing:2px;color:#d0d0d0;font-family:Arial,sans-serif;text-transform:uppercase;transition:color .2s}
+.toc-row-dots{flex:1;border-bottom:1px dotted rgba(255,255,255,.08);margin-bottom:2px}
+.toc-row-pg{font-size:9px;color:#555;font-family:Arial,sans-serif}
+#toc-x{position:absolute;top:16px;right:20px;background:none;border:none;color:#555;font-size:22px;cursor:pointer}
+#toc-x:hover{color:var(--accent)}
+
+/* ── Book ── */
+#scene{
+  perspective:2400px;display:flex;align-items:center;justify-content:center;
+  width:100vw;height:100vh;
+}
+
+#book{
+  display:flex;position:relative;
+  box-shadow:0 60px 160px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.04);
+}
+
+/* responsive book size via CSS var set by JS */
+:root{--bw:400px;--bh:400px}
+.book-side{width:var(--bw);height:var(--bh);overflow:hidden;position:relative}
+#lp{border-right:2px solid #bbb;box-shadow:inset -8px 0 20px rgba(0,0,0,.12)}
+#rp{box-shadow:inset 8px 0 20px rgba(0,0,0,.08)}
+
+/* spine */
+#book::after{
+  content:'';position:absolute;left:calc(50% - 4px);top:0;bottom:0;width:8px;
+  background:linear-gradient(90deg,#888,#e0e0e0,#888);
+  box-shadow:0 0 12px rgba(0,0,0,.4);z-index:15;
+}
+/* solo page — hide empty half + spine */
+#book.solo-right #lp{width:0;border:none;box-shadow:none}
+#book.solo-left  #rp{width:0;box-shadow:none}
+#book.solo-right::after,#book.solo-left::after{display:none}
+
+/* ── Page flip ── */
+#flipper{
+  position:absolute;right:0;top:0;
+  width:var(--bw);height:var(--bh);
+  transform-style:preserve-3d;
+  transform-origin:left center;
+  z-index:20;pointer-events:none;
+  transition:transform .65s cubic-bezier(.645,.045,.355,1);
+}
+#flipper.go{transform:rotateY(-180deg)}
+.fface{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden}
+#fback{transform:rotateY(180deg)}
+
+/* ── Corner click ── */
+#corner{
+  position:absolute;bottom:0;right:0;width:64px;height:64px;
+  z-index:30;cursor:pointer;
+}
+#corner::after{
+  content:'›';
+  position:absolute;bottom:8px;right:10px;
+  font-size:22px;color:rgba(201,168,76,.5);
+  transition:color .2s,transform .2s;
+  font-family:Arial,sans-serif;
+}
+#corner:hover::after{color:var(--accent);transform:translateX(2px)}
+#corner::before{
+  content:'';position:absolute;bottom:0;right:0;
+  width:0;height:0;border-style:solid;
+  border-width:0 0 50px 50px;
+  border-color:transparent transparent rgba(201,168,76,.12) transparent;
+  transition:border-width .2s,border-color .2s;
+}
+#corner:hover::before{border-width:0 0 64px 64px;border-color:transparent transparent rgba(201,168,76,.22) transparent}
+
+/* prev corner */
+#lcorner{
+  position:absolute;bottom:0;left:0;width:64px;height:64px;
+  z-index:30;cursor:pointer;
+}
+#lcorner::after{
+  content:'‹';position:absolute;bottom:8px;left:10px;
+  font-size:22px;color:rgba(201,168,76,.3);transition:color .2s;font-family:Arial,sans-serif;
+}
+#lcorner:hover::after{color:var(--accent)}
+
+/* ── Progress ── */
+#prog{position:fixed;bottom:0;left:0;right:0;height:2px;background:rgba(255,255,255,.04);z-index:100}
+#prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),#e8c96a);transition:width .5s}
+
+/* ── Page inner styles ── */
+.pg{width:100%;height:100%;position:relative;overflow:hidden}
+
+/* Cover */
+.pg.cov{
+  background:var(--cover);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.cov-grid{
+  position:absolute;inset:0;
+  background-image:linear-gradient(rgba(201,168,76,.05) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(201,168,76,.05) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+.cov-vline{width:1px;height:70px;background:var(--accent);margin-bottom:28px;opacity:.7}
+.cov-label{font-size:9px;letter-spacing:6px;color:var(--accent);font-family:Arial,sans-serif;text-transform:uppercase;margin-bottom:18px}
+.cov-name{font-size:calc(var(--bw) * 0.065);color:#fff;letter-spacing:3px;text-align:center;line-height:1.3}
+.cov-sub{font-size:9px;letter-spacing:5px;color:rgba(255,255,255,.3);font-family:Arial,sans-serif;text-transform:uppercase;margin-top:8px}
+.cov-year{position:absolute;bottom:24px;right:28px;font-size:10px;color:rgba(255,255,255,.15);letter-spacing:3px;font-family:Arial,sans-serif}
+.cov-corner{position:absolute;top:20px;left:20px;width:30px;height:30px;border-top:1px solid rgba(201,168,76,.3);border-left:1px solid rgba(201,168,76,.3)}
+.cov-corner.br{top:auto;left:auto;bottom:20px;right:20px;border-top:none;border-left:none;border-bottom:1px solid rgba(201,168,76,.3);border-right:1px solid rgba(201,168,76,.3)}
+
+/* Back cover */
+.pg.bcov{background:#080810;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.bcov-line{width:40px;height:1px;background:var(--accent);margin-bottom:20px;opacity:.5}
+.bcov-name{font-size:13px;letter-spacing:4px;color:rgba(255,255,255,.3);font-family:Arial,sans-serif}
+.bcov-tag{font-size:9px;letter-spacing:3px;color:rgba(201,168,76,.4);font-family:Arial,sans-serif;margin-top:6px}
+
+/* Section intro */
+.pg.sec{display:flex;flex-direction:column;justify-content:flex-end;padding:44px 36px}
+.pg.sec.navy{background:#1e3a5f}
+.pg.sec.pine{background:#1a3a28}
+.pg.sec.deep{background:#0d2233}
+.pg.sec.slate{background:#1e2a3f}
+.pg.sec.coal{background:#1a1a24}
+.sec-n{position:absolute;top:20px;right:24px;font-size:80px;color:rgba(255,255,255,.04);font-family:Arial,sans-serif;font-weight:900;line-height:1}
+.sec-tag{font-size:8px;letter-spacing:4px;color:var(--accent);font-family:Arial,sans-serif;text-transform:uppercase;margin-bottom:12px}
+.sec-title{font-size:calc(var(--bw)*0.07);color:#fff;line-height:1.15;margin-bottom:16px}
+.sec-desc{font-size:10px;color:rgba(255,255,255,.4);line-height:1.9;font-family:Arial,sans-serif;max-width:280px}
+.sec-bar{width:24px;height:2px;background:var(--accent);margin-bottom:16px}
+
+/* Content */
+.pg.cnt{background:var(--page);padding:36px}
+.pg.cnt.alt{background:#f4f2ee}
+.pg-label{font-size:7px;letter-spacing:3px;color:var(--accent);font-family:Arial,sans-serif;text-transform:uppercase;margin-bottom:4px}
+.pg-proj{font-size:8px;letter-spacing:2px;color:#aaa;font-family:Arial,sans-serif;text-transform:uppercase;margin-bottom:22px}
+.cnt-h{font-size:15px;color:var(--text);letter-spacing:1px;margin-bottom:10px}
+.cnt-div{width:24px;height:1px;background:var(--accent);margin:14px 0}
+.cnt-body{font-size:10px;line-height:1.9;color:#444;font-family:Arial,sans-serif}
+.cnt-kv{margin-bottom:14px}
+.cnt-k{font-size:7px;letter-spacing:3px;color:var(--accent);font-family:Arial,sans-serif;text-transform:uppercase;margin-bottom:3px}
+.cnt-v{font-size:11px;color:#333;font-family:Arial,sans-serif;line-height:1.5}
+
+/* Drawing placeholder */
+.drw{background:#f0ede6;border:1px solid #ddd;position:relative;display:flex;align-items:center;justify-content:center}
+.drw-label{font-size:8px;letter-spacing:3px;color:#bbb;font-family:Arial,sans-serif;text-transform:uppercase;z-index:1}
+.drw::before{content:'';position:absolute;inset:8px;border:1px dashed rgba(0,0,0,.07)}
+.drw-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,0,0,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.03) 1px,transparent 1px);background-size:16px 16px}
+
+/* TOC page */
+.pg.toc-pg{background:var(--page);padding:36px}
+.toc-pg-h{font-size:9px;letter-spacing:4px;color:var(--accent);font-family:Arial,sans-serif;text-transform:uppercase;margin-bottom:28px}
+.toc-e{display:flex;align-items:flex-end;gap:8px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.05);cursor:pointer}
+.toc-e:hover .toc-e-name{color:var(--accent)}
+.toc-e-n{font-size:8px;color:var(--accent);font-family:Arial,sans-serif;min-width:18px}
+.toc-e-name{font-size:10px;letter-spacing:1.5px;color:#333;font-family:Arial,sans-serif;text-transform:uppercase;transition:color .2s}
+.toc-e-dot{flex:1;border-bottom:1px dotted #ccc;margin-bottom:2px}
+.toc-e-pg{font-size:8px;color:#bbb;font-family:Arial,sans-serif}
+
+/* Tags / lists */
+.tag-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.tag{font-size:8px;letter-spacing:1px;padding:3px 8px;border:1px solid rgba(201,168,76,.3);color:var(--accent);font-family:Arial,sans-serif;text-transform:uppercase}
+
+/* Page number */
+.pn{position:absolute;bottom:14px;font-size:8px;color:#ccc;font-family:Arial,sans-serif;letter-spacing:2px}
+.pn.l{left:36px}.pn.r{right:36px}
+
+/* Arch shape decorations */
+.arch-shape{position:absolute;opacity:.06}
+.circle-deco{border-radius:50%;border:1px solid currentColor}
+</style>
+</head>
+<body>
+
+<!-- UI Bar -->
+<div id="ui">
+  <span id="ui-title">Adam Ali Imran — Architecture Portfolio</span>
+  <div id="ui-right">
+    <span id="page-indicator">1 / 44</span>
+    <button class="ui-btn" onclick="toggleToc()">Contents</button>
+    <button class="ui-btn" onclick="toggleFS()">⛶ Fullscreen</button>
+  </div>
+</div>
+
+<!-- TOC Overlay -->
+<div id="toc-overlay">
+  <div id="toc-panel">
+    <button id="toc-x" onclick="toggleToc()">×</button>
+    <h2>Table of Contents</h2>
+    <div id="toc-entries"></div>
+  </div>
+</div>
+
+<!-- Book -->
+<div id="scene">
+  <div id="book">
+    <div class="book-side" id="lp"></div>
+    <div class="book-side" id="rp">
+      <!-- Corner nav -->
+      <div id="corner" onclick="nextSpread()"></div>
+      <div id="lcorner" onclick="prevSpread()"></div>
+    </div>
+    <!-- Flipper (animates over right page) -->
+    <div id="flipper">
+      <div class="fface" id="ffront"></div>
+      <div class="fface" id="fback"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Progress -->
+<div id="prog"><div id="prog-fill"></div></div>
+
+<script>
+// ─── Image mode ───────────────────────────────────────────────────────────────
+// To use real PDF page images:
+//   1. Run:  pdftoppm -png -r 150 "portfolio (1).pdf" pages/page
+//      This creates pages/page-01.png … pages/page-44.png
+//   2. Set IMAGE_MODE = true and IMAGE_DIR = 'pages' below.
+//   The TOC and all navigation remain intact.
+const IMAGE_MODE = true;
+const IMAGE_DIR  = 'pages';     // folder containing page-01.png … page-44.png
+const TOTAL_PAGES = 44;
+
+function makeImagePages() {
+  const blank = `<div style="width:100%;height:100%;background:#0a0a14"></div>`;
+  const imgs = Array.from({length: TOTAL_PAGES}, (_, i) => {
+    const n = String(i + 1).padStart(2, '0');
+    return `<img src="${IMAGE_DIR}/page-${n}.png" style="width:100%;height:100%;object-fit:contain;display:block;background:#fff">`;
+  });
+  return [blank, ...imgs, blank]; // cover alone on right, back cover alone on left
+}
+
+// ─── Page data ───────────────────────────────────────────────────────────────
+const PAGES = IMAGE_MODE ? makeImagePages() : [
+  // 1 - Cover
+  `<div class="pg cov">
+    <div class="cov-grid"></div>
+    <div class="cov-corner"></div>
+    <div class="cov-corner br"></div>
+    <div class="cov-vline"></div>
+    <div class="cov-label">Portfolio</div>
+    <div class="cov-name">ADAM<br>ALI IMRAN</div>
+    <div class="cov-sub">Architecture · 2026</div>
+    <div class="cov-year">2026</div>
+  </div>`,
+
+  // 2 - CV About Me
+  `<div class="pg cnt">
+    <div class="pg-label">Curriculum Vitae</div>
+    <div class="pg-proj">&nbsp;</div>
+    <div class="cnt-h">About Me</div>
+    <div class="cnt-div"></div>
+    <div class="cnt-body">
+      I am currently pursuing a Bachelor of Science in Architecture (Honours) at Universiti Putra Malaysia (UPM), driven by a deep passion for the built environment and thoughtful design. My academic journey spans conceptual architectural studios, building construction, environmental systems, and technical design, allowing me to develop a holistic understanding of architecture as both art and science.
+    </div>
+    <div class="cnt-div"></div>
+    <div class="cnt-kv">
+      <div class="cnt-k">Email</div>
+      <div class="cnt-v">adamsulthan30@gmail.com</div>
+    </div>
+    <div class="cnt-kv">
+      <div class="cnt-k">University</div>
+      <div class="cnt-v">Universiti Putra Malaysia (UPM)</div>
+    </div>
+    <div class="cnt-kv">
+      <div class="cnt-k">Programme</div>
+      <div class="cnt-v">B.Sc. Architecture (Honours)</div>
+    </div>
+    <span class="pn r">02</span>
+  </div>`,
+
+  // 3 - Education
+  `<div class="pg cnt alt">
+    <div class="pg-label">Curriculum Vitae</div>
+    <div class="pg-proj">&nbsp;</div>
+    <div class="cnt-h">Education</div>
+    <div class="cnt-div"></div>
+    <div class="cnt-kv">
+      <div class="cnt-k">University</div>
+      <div class="cnt-v">Universiti Putra Malaysia (UPM) — Selangor, Malaysia<br><span style="font-size:9px;color:#888">Bachelor of Science in Architecture</span></div>
+    </div>
+    <div class="cnt-kv">
+      <div class="cnt-k">Senior High School</div>
+      <div class="cnt-v">SMA Sekolah Indonesia Riyadh — Riyadh, Saudi Arabia</div>
+    </div>
+    <div class="cnt-kv">
+      <div class="cnt-k">Junior High School</div>
+      <div class="cnt-v">SMP Jakarta Islamic Boys Boarding School — Jakarta, Indonesia</div>
+    </div>
+    <div class="cnt-kv">
+      <div class="cnt-k">Elementary</div>
+      <div class="cnt-v">Ideal Indian School — Doha, Qatar</div>
+    </div>
+    <span class="pn r">03</span>
+  </div>`,
+
+  // 4 - Table of Contents header
+  `<div class="pg toc-pg">
+    <div class="toc-pg-h">Table of Contents</div>
+    <div class="toc-e" onclick="gotoSpread(2)"><span class="toc-e-n">01</span><span class="toc-e-name">Curriculum Vitae</span><span class="toc-e-dot"></span><span class="toc-e-pg">02</span></div>
+    <div class="toc-e" onclick="gotoSpread(2)"><span class="toc-e-n">02</span><span class="toc-e-name">Education</span><span class="toc-e-dot"></span><span class="toc-e-pg">03</span></div>
+    <div class="toc-e" onclick="gotoSpread(2)"><span class="toc-e-n">03</span><span class="toc-e-name">Under The Cloud — Landmark</span><span class="toc-e-dot"></span><span class="toc-e-pg">06</span></div>
+    <div class="toc-e" onclick="gotoSpread(6)"><span class="toc-e-n">04</span><span class="toc-e-name">Botanical Education Centre</span><span class="toc-e-dot"></span><span class="toc-e-pg">14</span></div>
+    <div class="toc-e" onclick="gotoSpread(13)"><span class="toc-e-n">05</span><span class="toc-e-name">Aquascape — Seahorse</span><span class="toc-e-dot"></span><span class="toc-e-pg">36</span></div>
+    <div class="toc-e" onclick="gotoSpread(17)"><span class="toc-e-n">06</span><span class="toc-e-name">Sky Catcher</span><span class="toc-e-dot"></span><span class="toc-e-pg">40</span></div>
+    <div class="toc-e" onclick="gotoSpread(13)"><span class="toc-e-n">07</span><span class="toc-e-name">Quality Education — Micro Lab</span><span class="toc-e-dot"></span><span class="toc-e-pg">28</span></div>
+    <span class="pn r">04</span>
+  </div>`,
+
+  // 5 - Project list
+  `<div class="pg cnt">
+    <div class="pg-label">Projects Overview</div>
+    <div style="margin-top:20px">
+      <div style="padding:16px 0;border-bottom:1px solid #eee">
+        <div style="font-size:8px;letter-spacing:3px;color:var(--accent);font-family:Arial,sans-serif">PROJECT 01</div>
+        <div style="font-size:14px;letter-spacing:1px;margin-top:4px">Under The Cloud <em style="font-size:11px;color:#888">"Landmark"</em></div>
+      </div>
+      <div style="padding:16px 0;border-bottom:1px solid #eee">
+        <div style="font-size:8px;letter-spacing:3px;color:var(--accent);font-family:Arial,sans-serif">PROJECT 02</div>
+        <div style="font-size:14px;letter-spacing:1px;margin-top:4px">Botanical Education Centre</div>
+      </div>
+      <div style="padding:16px 0;border-bottom:1px solid #eee">
+        <div style="font-size:8px;letter-spacing:3px;color:var(--accent);font-family:Arial,sans-serif">PROJECT 03</div>
+        <div style="font-size:14px;letter-spacing:1px;margin-top:4px">Aquascape <em style="font-size:11px;color:#888">"Seahorse"</em></div>
+      </div>
+      <div style="padding:16px 0;border-bottom:1px solid #eee">
+        <div style="font-size:8px;letter-spacing:3px;color:var(--accent);font-family:Arial,sans-serif">PROJECT 04</div>
+        <div style="font-size:14px;letter-spacing:1px;margin-top:4px">Sky Catcher</div>
+      </div>
+      <div style="padding:16px 0">
+        <div style="font-size:8px;letter-spacing:3px;color:var(--accent);font-family:Arial,sans-serif">PROJECT 05</div>
+        <div style="font-size:14px;letter-spacing:1px;margin-top:4px">Quality Education <em style="font-size:11px;color:#888">"Micro Lab"</em></div>
+      </div>
+    </div>
+    <span class="pn r">05</span>
+  </div>`,
+
+  // 6 - Under The Cloud intro
+  `<div class="pg sec navy">
+    <div class="sec-n">01</div>
+    <div class="sec-tag">Project 01 — Landmark</div>
+    <div class="sec-bar"></div>
+    <div class="sec-title">Under<br>The Cloud</div>
+    <div class="sec-desc">Inspired by Batik megamendung, the design translates the cloud into layered forms above human scale. Light and vertical space create a spiritual journey, making users feel small, calm, and reflective.</div>
+    <span class="pn l" style="color:rgba(255,255,255,.2)">06</span>
+  </div>`,
+
+  // 7 - Religious Connection + materials
+  `<div class="pg cnt">
+    <div class="pg-label">Concept</div>
+    <div class="pg-proj">Under The Cloud</div>
+    <div class="cnt-h">Religious Connection</div>
+    <div class="cnt-div"></div>
+    <div class="cnt-body">
+      The cloud above represents something greater (God / nature), while humans remain below. Light from above symbolizes divine presence, creating a sense of humility and spiritual awareness.
+    </div>
+    <div class="cnt-div"></div>
+    <div class="cnt-h" style="font-size:12px">Compression → Release</div>
+    <div class="cnt-body" style="margin-top:8px">
+      The entrance is intentionally designed narrow to create compression — a moment of tension before the space releases upward into the cloud-like ceiling volume.
+    </div>
+    <div class="cnt-div"></div>
+    <div class="cnt-k">Materials</div>
+    <div class="tag-list">
+      <span class="tag">Fabric</span>
+      <span class="tag">Polystyrene</span>
+      <span class="tag">Board Insulation</span>
+      <span class="tag">Concrete</span>
+      <span class="tag">Plaster</span>
+    </div>
+    <span class="pn r">07</span>
+  </div>`,
+
+  // 8 - Elevation
+  `<div class="pg cnt alt">
+    <div class="pg-label">Elevation</div>
+    <div class="pg-proj">Under The Cloud</div>
+    <div class="drw" style="height:55%;margin-bottom:12px">
+      <div class="drw-grid"></div>
+      <!-- elevation silhouette -->
+      <svg width="90%" height="90%" viewBox="0 0 300 160" style="position:absolute;opacity:.25">
+        <rect x="30" y="80" width="240" height="60" fill="none" stroke="#333" stroke-width="1"/>
+        <path d="M30 80 Q80 20 150 30 Q220 20 270 80" fill="none" stroke="#333" stroke-width="1.5"/>
+        <line x1="0" y1="140" x2="300" y2="140" stroke="#333" stroke-width="0.5"/>
+        <rect x="80" y="100" width="30" height="40" fill="none" stroke="#333" stroke-width="0.8"/>
+        <rect x="130" y="95" width="40" height="45" fill="none" stroke="#333" stroke-width="0.8"/>
+        <rect x="190" y="100" width="30" height="40" fill="none" stroke="#333" stroke-width="0.8"/>
+      </svg>
+      <div class="drw-label">Elevation Drawing</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:8px;font-family:Arial,sans-serif;color:#888;letter-spacing:1px">
+      <div>Right Elevation</div><div>Left Elevation</div>
+      <div>Front Elevation</div><div>Rear Elevation</div>
+    </div>
+    <span class="pn r">08</span>
+  </div>`,
+
+  // 9 - Section / Roof Plan
+  `<div class="pg cnt">
+    <div class="pg-label">Section · Roof Plan</div>
+    <div class="pg-proj">Under The Cloud</div>
+    <div class="drw" style="height:40%;margin-bottom:10px">
+      <div class="drw-grid"></div>
+      <svg width="85%" height="85%" viewBox="0 0 280 120" style="position:absolute;opacity:.2">
+        <rect x="10" y="20" width="260" height="80" fill="none" stroke="#333" stroke-width="0.8"/>
+        <path d="M10 50 L60 30 L100 45 L140 25 L180 45 L220 30 L270 50" fill="none" stroke="#333" stroke-width="1.2"/>
+        <line x1="10" y1="100" x2="270" y2="100" stroke="#333" stroke-width="0.5"/>
+        <line x1="60" y1="20" x2="60" y2="100" stroke="#333" stroke-width="0.5" stroke-dasharray="3,3"/>
+        <line x1="140" y1="20" x2="140" y2="100" stroke="#333" stroke-width="0.5" stroke-dasharray="3,3"/>
+        <line x1="220" y1="20" x2="220" y2="100" stroke="#333" stroke-width="0.5" stroke-dasharray="3,3"/>
+      </svg>
+      <div class="drw-label">Section</div>
+    </div>
+    <div class="drw" style="height:35%">
+      <div class="drw-grid"></div>
+      <svg width="70%" height="70%" viewBox="0 0 200 200" style="position:absolute;opacity:.2">
+        <rect x="10" y="10" width="180" height="180" fill="none" stroke="#333" stroke-width="0.8"/>
+        <ellipse cx="100" cy="100" rx="70" ry="70" fill="none" stroke="#333" stroke-width="1"/>
+        <ellipse cx="100" cy="100" rx="40" ry="40" fill="none" stroke="#333" stroke-width="0.8" stroke-dasharray="4,4"/>
+        <line x1="10" y1="100" x2="190" y2="100" stroke="#333" stroke-width="0.5" stroke-dasharray="3,3"/>
+        <line x1="100" y1="10" x2="100" y2="190" stroke="#333" stroke-width="0.5" stroke-dasharray="3,3"/>
+      </svg>
+      <div class="drw-label">Roof Plan</div>
+    </div>
+    <span class="pn r">09</span>
+  </div>`,
+
+  // 10 - Interior
+  `<div class="pg cnt alt">
+    <div class="pg-label">Interior</div>
+    <div class="pg-proj">Under The Cloud</div>
+    <div class="drw" style="height:75%">
+      <div class="drw-grid"></div>
+      <svg width="80%" height="80%" viewBox="0 0 280 220" style="position:absolute;opacity:.18">
+        <rect x="20" y="20" width="240" height="180" fill="none" stroke="#333" stroke-width="0.8"/>
+        <path d="M20 120 Q60 60 140 50 Q220 60 260 120" fill="rgba(200,180,140,.3)" stroke="#333" stroke-width="1"/>
+        <path d="M20 140 Q60 90 140 80 Q220 90 260 140" fill="none" stroke="#555" stroke-width="0.6" stroke-dasharray="4,4"/>
+        <rect x="60" y="150" width="160" height="50" fill="rgba(200,200,200,.2)" stroke="#333" stroke-width="0.6"/>
+        <line x1="20" y1="200" x2="260" y2="200" stroke="#333" stroke-width="1"/>
+        <rect x="100" y="155" width="20" height="45" fill="rgba(180,160,120,.2)" stroke="#333" stroke-width="0.5"/>
+        <rect x="160" y="155" width="20" height="45" fill="rgba(180,160,120,.2)" stroke="#333" stroke-width="0.5"/>
+      </svg>
+      <div class="drw-label">Interior Render</div>
+    </div>
+    <div class="cnt-body" style="margin-top:14px;font-size:9px">
+      The interior reveals the full cloud form overhead — layered curves catching light from apertures above, creating a dynamic play of shadow.
+    </div>
+    <span class="pn r">10</span>
+  </div>`,
+
+  // 11 - Exterior
+  `<div class="pg cnt">
+    <div class="pg-label">Exterior</div>
+    <div class="pg-proj">Under The Cloud</div>
+    <div class="drw" style="height:75%">
+      <div class="drw-grid"></div>
+      <svg width="85%" height="85%" viewBox="0 0 300 220" style="position:absolute;opacity:.18">
+        <rect x="0" y="180" width="300" height="40" fill="rgba(180,170,150,.2)"/>
+        <path d="M40 180 L40 80 Q150 20 260 80 L260 180" fill="rgba(200,190,170,.15)" stroke="#333" stroke-width="1"/>
+        <path d="M40 80 Q150 20 260 80" fill="none" stroke="#444" stroke-width="1.5"/>
+        <path d="M60 180 L60 90 Q150 40 240 90 L240 180" fill="none" stroke="#555" stroke-width="0.5" stroke-dasharray="3,3"/>
+        <rect x="100" y="130" width="100" height="50" fill="rgba(200,200,200,.1)" stroke="#333" stroke-width="0.6"/>
+        <line x1="0" y1="180" x2="300" y2="180" stroke="#333" stroke-width="1"/>
+      </svg>
+      <div class="drw-label">Exterior Perspective</div>
+    </div>
+    <div class="cnt-body" style="margin-top:12px;font-size:9px">
+      Batik megamendung motifs manifest as flowing curved surfaces, visible from afar as a sculptural landmark within the landscape.
+    </div>
+    <span class="pn r">11</span>
+  </div>`,
+
+  // 12 - Appendix
+  `<div class="pg cnt alt">
+    <div class="pg-label">Appendix</div>
+    <div class="pg-proj">Under The Cloud</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;height:70%">
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Detail 01</div></div>
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Detail 02</div></div>
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Detail 03</div></div>
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Detail 04</div></div>
+    </div>
+    <span class="pn r">12</span>
+  </div>`,
+
+  // 13 - Physical Model
+  `<div class="pg cnt">
+    <div class="pg-label">Physical Model</div>
+    <div class="pg-proj">Under The Cloud</div>
+    <div class="drw" style="height:80%">
+      <div class="drw-grid"></div>
+      <svg width="70%" height="70%" viewBox="0 0 240 200" style="position:absolute;opacity:.2">
+        <path d="M40 160 L120 60 L200 160 Z" fill="rgba(200,180,140,.2)" stroke="#555" stroke-width="1"/>
+        <path d="M40 160 L80 100 Q120 50 160 100 L200 160" fill="rgba(180,160,120,.15)" stroke="#333" stroke-width="1.2"/>
+        <ellipse cx="120" cy="100" rx="60" ry="30" fill="none" stroke="#333" stroke-width="0.8" stroke-dasharray="4,4" transform="rotate(-10,120,100)"/>
+        <ellipse cx="120" cy="80" rx="40" ry="20" fill="none" stroke="#444" stroke-width="0.6" stroke-dasharray="3,3" transform="rotate(-8,120,80)"/>
+      </svg>
+      <div class="drw-label">1:50 Physical Model</div>
+    </div>
+    <span class="pn r">13</span>
+  </div>`,
+
+  // 14 - Botanical intro
+  `<div class="pg sec pine">
+    <div class="sec-n">02</div>
+    <div class="sec-tag">Project 02 — Education Centre</div>
+    <div class="sec-bar"></div>
+    <div class="sec-title">Botanical<br>Education<br>Centre</div>
+    <div class="sec-desc">Supports SDG 4: Quality Education by creating an inclusive, community-based learning environment integrated with nature. The surrounding greenery becomes a living classroom.</div>
+    <span class="pn l" style="color:rgba(255,255,255,.2)">14</span>
+  </div>`,
+
+  // 15 - Botanical blank / concept sketch
+  `<div class="pg cnt">
+    <div class="pg-label">Concept</div>
+    <div class="pg-proj">Botanical Education Centre</div>
+    <div class="drw" style="height:70%">
+      <div class="drw-grid"></div>
+      <svg width="80%" height="80%" viewBox="0 0 280 220" style="position:absolute;opacity:.2">
+        <!-- organic plant-like form -->
+        <path d="M140 200 L140 100" stroke="#333" stroke-width="1.5"/>
+        <path d="M140 160 Q100 130 80 100 Q110 95 140 120" fill="rgba(100,160,80,.2)" stroke="#333" stroke-width="1"/>
+        <path d="M140 140 Q180 110 200 80 Q170 75 140 100" fill="rgba(100,160,80,.15)" stroke="#333" stroke-width="1"/>
+        <path d="M140 120 Q90 90 70 60 Q110 55 140 80" fill="rgba(100,160,80,.1)" stroke="#333" stroke-width="0.8"/>
+        <path d="M140 100 Q190 70 210 40 Q175 35 140 60" fill="rgba(100,160,80,.1)" stroke="#333" stroke-width="0.8"/>
+        <ellipse cx="140" cy="200" rx="30" ry="5" fill="none" stroke="#333" stroke-width="0.6"/>
+      </svg>
+      <div class="drw-label">Concept Sketch</div>
+    </div>
+    <div class="cnt-body" style="margin-top:12px;font-size:9px">
+      Architectural form reflects plant growth and interconnectedness, symbolising education as a journey of continuous discovery.
+    </div>
+    <span class="pn r">15</span>
+  </div>`,
+
+  // 16 - Site Context
+  `<div class="pg cnt alt">
+    <div class="pg-label">Site Context</div>
+    <div class="pg-proj">Botanical Education Centre</div>
+    <div class="cnt-h">Kampung Kunci Air Buang</div>
+    <div class="cnt-div"></div>
+    <div class="cnt-body">
+      A traditional Malay village located within the Sawah Sempadan agricultural zone in Tanjong Karan, Selangor. The area is widely known for its extensive paddy fields, forming one of the important rice-growing landscapes in the state. The site is strongly defined by its rural identity and agricultural heritage.
+    </div>
+    <div class="cnt-div"></div>
+    <div class="drw" style="height:35%">
+      <div class="drw-grid"></div>
+      <div class="drw-label">Site Map</div>
+    </div>
+    <span class="pn r">16</span>
+  </div>`,
+
+  // 17 - Botanical drawings
+  `<div class="pg cnt">
+    <div class="pg-label">Design Development</div>
+    <div class="pg-proj">Botanical Education Centre</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;height:75%">
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Form Study 01</div></div>
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Form Study 02</div></div>
+      <div class="drw" style="grid-column:1/-1"><div class="drw-grid"></div><div class="drw-label">Massing Model</div></div>
+    </div>
+    <span class="pn r">17</span>
+  </div>`,
+
+  // 18 - The Project
+  `<div class="pg cnt alt">
+    <div class="pg-label">The Project</div>
+    <div class="pg-proj">Botanical Education Centre</div>
+    <div class="cnt-h">Programme Brief</div>
+    <div class="cnt-div"></div>
+    <div class="cnt-body">
+      Students are to design a maximum two-storey Education Center with a total floor area of up to 500m², centred on SDG 4: Quality Education. The project explores how architecture can support inclusive, accessible, and innovative learning, with the building's spatial organisation responding to natural systems.
+    </div>
+    <div class="cnt-div"></div>
+    <div class="cnt-kv">
+      <div class="cnt-k">Floor Area</div>
+      <div class="cnt-v">Up to 500 m²</div>
+    </div>
+    <div class="cnt-kv">
+      <div class="cnt-k">Storeys</div>
+      <div class="cnt-v">Maximum 2</div>
+    </div>
+    <div class="cnt-kv">
+      <div class="cnt-k">Theme</div>
+      <div class="cnt-v">SDG 4 — Quality Education</div>
+    </div>
+    <span class="pn r">18</span>
+  </div>`,
+
+  // 19 - Botanical concept
+  `<div class="pg cnt">
+    <div class="pg-label">Concept Development</div>
+    <div class="pg-proj">Botanical Education Centre</div>
+    <div class="cnt-body">
+      With SDG 4: Quality Education as its guiding principle, the Botanical Education Centre promotes environmental awareness and lifelong learning through nature. Its architectural form reflects plant growth and interconnectedness, symbolising education as a journey of continuous discovery. Flexible learning spaces open to the botanical surroundings, allowing nature to serve as both teacher and teaching tool.
+    </div>
+    <div class="cnt-div"></div>
+    <div class="drw" style="height:45%">
+      <div class="drw-grid"></div>
+      <svg width="85%" height="85%" viewBox="0 0 280 180" style="position:absolute;opacity:.18">
+        <rect x="20" y="20" width="240" height="140" fill="none" stroke="#333" stroke-width="0.8"/>
+        <path d="M20 100 Q80 40 140 60 Q200 80 260 100" fill="none" stroke="#333" stroke-width="1"/>
+        <circle cx="80" cy="70" r="25" fill="none" stroke="#333" stroke-width="0.7" stroke-dasharray="3,3"/>
+        <circle cx="140" cy="60" r="20" fill="none" stroke="#333" stroke-width="0.7" stroke-dasharray="3,3"/>
+        <circle cx="200" cy="80" r="25" fill="none" stroke="#333" stroke-width="0.7" stroke-dasharray="3,3"/>
+      </svg>
+      <div class="drw-label">Concept Diagram</div>
+    </div>
+    <span class="pn r">19</span>
+  </div>`,
+
+  // 20 - Roof Plan
+  `<div class="pg cnt alt">
+    <div class="pg-label">Roof Plan</div>
+    <div class="pg-proj">Botanical Education Centre</div>
+    <div class="drw" style="height:82%">
+      <div class="drw-grid"></div>
+      <svg width="80%" height="80%" viewBox="0 0 260 260" style="position:absolute;opacity:.2">
+        <rect x="10" y="10" width="240" height="240" fill="none" stroke="#333" stroke-width="0.6"/>
+        <rect x="30" y="30" width="200" height="200" fill="none" stroke="#333" stroke-width="0.8"/>
+        <ellipse cx="130" cy="130" rx="80" ry="60" fill="none" stroke="#333" stroke-width="1"/>
+        <ellipse cx="130" cy="130" rx="50" ry="35" fill="none" stroke="#333" stroke-width="0.7" stroke-dasharray="4,3"/>
+        <line x1="10" y1="130" x2="250" y2="130" stroke="#333" stroke-width="0.4" stroke-dasharray="5,5"/>
+        <line x1="130" y1="10" x2="130" y2="250" stroke="#333" stroke-width="0.4" stroke-dasharray="5,5"/>
+        <rect x="60" y="180" width="140" height="50" fill="none" stroke="#333" stroke-width="0.8"/>
+      </svg>
+      <div class="drw-label">Roof Plan</div>
+    </div>
+    <span class="pn r">20</span>
+  </div>`,
+
+  // 21 - Botanical render
+  `<div class="pg cnt">
+    <div class="pg-label">Visualisation</div>
+    <div class="pg-proj">Botanical Education Centre</div>
+    <div class="drw" style="height:80%">
+      <div class="drw-grid"></div>
+      <div class="drw-label">Exterior Render</div>
+    </div>
+    <span class="pn r">21</span>
+  </div>`,
+
+  // 22 - Elevation
+  `<div class="pg cnt alt">
+    <div class="pg-label">Elevation</div>
+    <div class="pg-proj">Botanical Education Centre</div>
+    <div class="drw" style="height:40%;margin-bottom:10px">
+      <div class="drw-grid"></div>
+      <div class="drw-label">North Elevation</div>
+    </div>
+    <div class="drw" style="height:40%">
+      <div class="drw-grid"></div>
+      <div class="drw-label">South Elevation</div>
+    </div>
+    <span class="pn r">22</span>
+  </div>`,
+
+  // 23 - Section
+  `<div class="pg cnt">
+    <div class="pg-label">Section</div>
+    <div class="pg-proj">Botanical Education Centre</div>
+    <div class="drw" style="height:45%;margin-bottom:10px">
+      <div class="drw-grid"></div>
+      <div class="drw-label">Section A–A</div>
+    </div>
+    <div class="drw" style="height:40%">
+      <div class="drw-grid"></div>
+      <div class="drw-label">Section B–B</div>
+    </div>
+    <span class="pn r">23</span>
+  </div>`,
+
+  // 24 - Appendix
+  `<div class="pg cnt alt">
+    <div class="pg-label">Appendix</div>
+    <div class="pg-proj">Botanical Education Centre</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;height:80%">
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Structure</div></div>
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Landscape</div></div>
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Details</div></div>
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Materials</div></div>
+    </div>
+    <span class="pn r">24</span>
+  </div>`,
+
+  // 25 - Appendix 2
+  `<div class="pg cnt">
+    <div class="pg-label">Appendix</div>
+    <div class="pg-proj">Botanical Education Centre</div>
+    <div class="drw" style="height:80%">
+      <div class="drw-grid"></div><div class="drw-label">Construction Details</div>
+    </div>
+    <span class="pn r">25</span>
+  </div>`,
+
+  // 26 - Appendix 3
+  `<div class="pg cnt alt">
+    <div class="pg-label">Appendix</div>
+    <div class="pg-proj">Botanical Education Centre</div>
+    <div class="drw" style="height:80%">
+      <div class="drw-grid"></div><div class="drw-label">Environmental Analysis</div>
+    </div>
+    <span class="pn r">26</span>
+  </div>`,
+
+  // 27 - Physical Model
+  `<div class="pg cnt">
+    <div class="pg-label">Physical Model</div>
+    <div class="pg-proj">Botanical Education Centre</div>
+    <div class="drw" style="height:80%">
+      <div class="drw-grid"></div>
+      <svg width="75%" height="75%" viewBox="0 0 260 200" style="position:absolute;opacity:.2">
+        <path d="M130 180 L130 60" stroke="#333" stroke-width="1.5"/>
+        <path d="M130 140 Q80 110 50 80 Q100 70 130 100" fill="rgba(100,160,80,.15)" stroke="#333" stroke-width="1"/>
+        <path d="M130 120 Q180 90 210 60 Q160 50 130 80" fill="rgba(100,160,80,.12)" stroke="#333" stroke-width="1"/>
+        <ellipse cx="130" cy="180" rx="40" ry="8" fill="none" stroke="#333" stroke-width="0.6"/>
+        <path d="M130 100 Q90 75 70 50 Q110 45 130 70" fill="rgba(80,140,60,.1)" stroke="#333" stroke-width="0.8"/>
+      </svg>
+      <div class="drw-label">1:50 Physical Model</div>
+    </div>
+    <span class="pn r">27</span>
+  </div>`,
+
+  // 28 - Micro-Lab intro
+  `<div class="pg sec slate">
+    <div class="sec-n">05</div>
+    <div class="sec-tag">Project 05 — Quality Education</div>
+    <div class="sec-bar"></div>
+    <div class="sec-title">Micro<br>Lab</div>
+    <div class="sec-desc">Inspired by the idea of learning as growth and blooming, reflected in its flower-like form with layered, leaf-shaped structures that open outward to the community. The unfolding shells symbolise stages of knowledge.</div>
+    <span class="pn l" style="color:rgba(255,255,255,.2)">28</span>
+  </div>`,
+
+  // 29 - Micro-Lab Site
+  `<div class="pg cnt">
+    <div class="pg-label">Site Context</div>
+    <div class="pg-proj">Micro-Lab</div>
+    <div class="cnt-h">Kampung Kunci Air Buang</div>
+    <div class="cnt-div"></div>
+    <div class="cnt-body">
+      A traditional Malay village located within the Sawah Sempadan agricultural zone in Tanjong Karan, Selangor. The site is strongly defined by its rural identity — extensive paddy fields forming the backdrop for this community learning intervention.
+    </div>
+    <div class="cnt-div"></div>
+    <div class="drw" style="height:40%">
+      <div class="drw-grid"></div><div class="drw-label">Site Plan</div>
+    </div>
+    <span class="pn r">29</span>
+  </div>`,
+
+  // 30 - Site Analysis + Concept
+  `<div class="pg cnt alt">
+    <div class="pg-label">Site Analysis · Concept</div>
+    <div class="pg-proj">Micro-Lab</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;height:50%">
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Sun Path</div></div>
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Wind Path</div></div>
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Pathway</div></div>
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Noise</div></div>
+    </div>
+    <div class="cnt-k">Design Response</div>
+    <div class="tag-list">
+      <span class="tag">Natural Light</span>
+      <span class="tag">Natural Ventilation</span>
+      <span class="tag">Community Access</span>
+    </div>
+    <span class="pn r">30</span>
+  </div>`,
+
+  // 31 - Floor Plan
+  `<div class="pg cnt">
+    <div class="pg-label">Floor Plan</div>
+    <div class="pg-proj">Micro-Lab</div>
+    <div class="drw" style="height:40%;margin-bottom:10px">
+      <div class="drw-grid"></div>
+      <svg width="80%" height="80%" viewBox="0 0 260 120" style="position:absolute;opacity:.2">
+        <rect x="10" y="10" width="240" height="100" fill="none" stroke="#333" stroke-width="0.8"/>
+        <ellipse cx="130" cy="60" rx="90" ry="40" fill="none" stroke="#333" stroke-width="1"/>
+        <rect x="50" y="40" width="60" height="40" fill="none" stroke="#333" stroke-width="0.6"/>
+        <rect x="150" y="40" width="60" height="40" fill="none" stroke="#333" stroke-width="0.6"/>
+        <line x1="130" y1="10" x2="130" y2="110" stroke="#333" stroke-width="0.4" stroke-dasharray="4,4"/>
+      </svg>
+      <div class="drw-label">Ground Floor</div>
+    </div>
+    <div class="drw" style="height:40%">
+      <div class="drw-grid"></div><div class="drw-label">First Floor</div>
+    </div>
+    <span class="pn r">31</span>
+  </div>`,
+
+  // 32 - Elevation
+  `<div class="pg cnt alt">
+    <div class="pg-label">Elevation</div>
+    <div class="pg-proj">Micro-Lab</div>
+    <div class="drw" style="height:40%;margin-bottom:10px">
+      <div class="drw-grid"></div><div class="drw-label">Front Elevation</div>
+    </div>
+    <div class="drw" style="height:40%">
+      <div class="drw-grid"></div><div class="drw-label">Side Elevation</div>
+    </div>
+    <span class="pn r">32</span>
+  </div>`,
+
+  // 33 - Roof / Section
+  `<div class="pg cnt">
+    <div class="pg-label">Roof Plan · Section</div>
+    <div class="pg-proj">Micro-Lab</div>
+    <div class="drw" style="height:40%;margin-bottom:10px">
+      <div class="drw-grid"></div><div class="drw-label">Roof Plan</div>
+    </div>
+    <div class="drw" style="height:40%">
+      <div class="drw-grid"></div><div class="drw-label">Section</div>
+    </div>
+    <span class="pn r">33</span>
+  </div>`,
+
+  // 34 - Appendix
+  `<div class="pg cnt alt">
+    <div class="pg-label">Appendix</div>
+    <div class="pg-proj">Micro-Lab</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;height:80%">
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Perspective 01</div></div>
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Perspective 02</div></div>
+      <div class="drw" style="grid-column:1/-1"><div class="drw-grid"></div><div class="drw-label">Interior View</div></div>
+    </div>
+    <span class="pn r">34</span>
+  </div>`,
+
+  // 35 - Physical Model
+  `<div class="pg cnt">
+    <div class="pg-label">Physical Model</div>
+    <div class="pg-proj">Micro-Lab</div>
+    <div class="drw" style="height:80%">
+      <div class="drw-grid"></div>
+      <svg width="75%" height="75%" viewBox="0 0 260 200" style="position:absolute;opacity:.2">
+        <ellipse cx="130" cy="160" rx="80" ry="20" fill="none" stroke="#333" stroke-width="0.8"/>
+        <path d="M50 160 Q80 80 130 50 Q180 80 210 160" fill="rgba(180,160,100,.1)" stroke="#333" stroke-width="1"/>
+        <path d="M70 160 Q95 90 130 65 Q165 90 190 160" fill="none" stroke="#333" stroke-width="0.7" stroke-dasharray="4,4"/>
+        <circle cx="130" cy="50" r="15" fill="rgba(200,180,120,.2)" stroke="#333" stroke-width="1"/>
+        <path d="M115 60 Q80 100 70 140" stroke="#333" stroke-width="0.6" stroke-dasharray="3,3"/>
+        <path d="M145 60 Q180 100 190 140" stroke="#333" stroke-width="0.6" stroke-dasharray="3,3"/>
+      </svg>
+      <div class="drw-label">Physical Model</div>
+    </div>
+    <span class="pn r">35</span>
+  </div>`,
+
+  // 36 - Aquascape intro
+  `<div class="pg sec ocean">
+    <div class="sec-n">03</div>
+    <div class="sec-tag">Project 03 — Form Study</div>
+    <div class="sec-bar"></div>
+    <div class="sec-title">Aquascape<br><span style="font-size:0.6em;opacity:.7">"Seahorse"</span></div>
+    <div class="sec-desc">A seahorse as inspiration — reflecting a desire to blend natural elegance with functional design. The seahorse's unique vertical form and intricate exoskeleton offer insights into creating structures both strong and flexible.</div>
+    <span class="pn l" style="color:rgba(255,255,255,.2)">36</span>
+  </div>`,
+
+  // 37 - Translation
+  `<div class="pg cnt">
+    <div class="pg-label">Translation</div>
+    <div class="pg-proj">Aquascape</div>
+    <div class="cnt-h">From Nature to Form</div>
+    <div class="cnt-div"></div>
+    <div class="cnt-body">
+      The seahorse's exoskeleton pattern is translated into an architectural skin — a series of interlocking bony plates that create structural rigidity while allowing controlled flexibility at joints.
+    </div>
+    <div class="cnt-div"></div>
+    <div class="drw" style="height:45%">
+      <div class="drw-grid"></div>
+      <svg width="75%" height="75%" viewBox="0 0 240 180" style="position:absolute;opacity:.2">
+        <!-- Seahorse silhouette abstraction -->
+        <path d="M120 20 Q160 30 160 70 Q160 120 130 150 Q110 170 100 170 Q85 170 80 155 Q75 140 90 130 Q110 120 120 100 Q130 80 120 60 Q110 40 120 20" fill="none" stroke="#333" stroke-width="1.5"/>
+        <path d="M120 50 Q140 55 140 80 Q140 100 125 115" fill="none" stroke="#333" stroke-width="0.8" stroke-dasharray="3,3"/>
+        <ellipse cx="125" cy="40" rx="20" ry="15" fill="none" stroke="#333" stroke-width="0.8"/>
+        <!-- Grid translation -->
+        <rect x="160" y="30" width="60" height="120" fill="none" stroke="#333" stroke-width="0.5"/>
+        <line x1="160" y1="60" x2="220" y2="60" stroke="#333" stroke-width="0.4" stroke-dasharray="2,2"/>
+        <line x1="160" y1="90" x2="220" y2="90" stroke="#333" stroke-width="0.4" stroke-dasharray="2,2"/>
+        <line x1="160" y1="120" x2="220" y2="120" stroke="#333" stroke-width="0.4" stroke-dasharray="2,2"/>
+        <path d="M160 150 L220 30" stroke="#333" stroke-width="0.6" opacity=".4"/>
+      </svg>
+      <div class="drw-label">Translation Study</div>
+    </div>
+    <span class="pn r">37</span>
+  </div>`,
+
+  // 38 - Manipulation
+  `<div class="pg cnt alt">
+    <div class="pg-label">Manipulation</div>
+    <div class="pg-proj">Aquascape</div>
+    <div class="cnt-body">
+      This design is inspired by the seahorse's tail, which has a natural rhythm of repeating segments that create both strength and flexibility. I applied this rhythm to my design by using a pattern of small and large sizes, creating a dynamic and flowing structure. This manipulation helps bring balance and movement to the form.
+    </div>
+    <div class="cnt-div"></div>
+    <div class="drw" style="height:50%">
+      <div class="drw-grid"></div>
+      <svg width="80%" height="80%" viewBox="0 0 280 180" style="position:absolute;opacity:.2">
+        <!-- Spiral/rhythm segments -->
+        <ellipse cx="60" cy="90" rx="40" ry="15" fill="none" stroke="#333" stroke-width="1" transform="rotate(-20,60,90)"/>
+        <ellipse cx="110" cy="80" rx="35" ry="12" fill="none" stroke="#333" stroke-width="0.9" transform="rotate(-15,110,80)"/>
+        <ellipse cx="155" cy="72" rx="28" ry="10" fill="none" stroke="#333" stroke-width="0.8" transform="rotate(-10,155,72)"/>
+        <ellipse cx="193" cy="67" rx="22" ry="8" fill="none" stroke="#333" stroke-width="0.7" transform="rotate(-5,193,67)"/>
+        <ellipse cx="223" cy="65" rx="16" ry="6" fill="none" stroke="#333" stroke-width="0.6"/>
+        <path d="M20 90 Q80 40 140 60 Q200 80 260 60" fill="none" stroke="#444" stroke-width="0.8" stroke-dasharray="4,3"/>
+      </svg>
+      <div class="drw-label">Rhythm Study</div>
+    </div>
+    <span class="pn r">38</span>
+  </div>`,
+
+  // 39 - Final Physical Model
+  `<div class="pg cnt">
+    <div class="pg-label">Final Model</div>
+    <div class="pg-proj">Aquascape</div>
+    <div class="cnt-body" style="font-size:10px">
+      The final model captures the rhythmic flow of a seahorse's tail through overlapping, spiraling planes. Variation in sizes creates depth and movement, enhancing the dynamic and organic feel of the design. The balanced composition transforms natural patterns into a visually striking sculptural form.
+    </div>
+    <div class="cnt-div"></div>
+    <div class="drw" style="height:55%">
+      <div class="drw-grid"></div>
+      <svg width="75%" height="75%" viewBox="0 0 240 180" style="position:absolute;opacity:.2">
+        <path d="M40 160 Q60 80 120 40 Q160 20 200 60 Q220 100 200 140 Q180 170 140 160 Q100 150 80 120 Q60 90 100 70 Q140 50 160 80" fill="none" stroke="#333" stroke-width="1.5"/>
+        <path d="M60 150 Q70 90 120 60 Q150 45 175 70" fill="none" stroke="#333" stroke-width="0.8" stroke-dasharray="3,3"/>
+        <path d="M80 140 Q90 100 130 80" fill="none" stroke="#333" stroke-width="0.6" stroke-dasharray="2,2"/>
+      </svg>
+      <div class="drw-label">Physical Model — Extrusion Study</div>
+    </div>
+    <span class="pn r">39</span>
+  </div>`,
+
+  // 40 - Sky Catcher intro
+  `<div class="pg sec coal">
+    <div class="sec-n">04</div>
+    <div class="sec-tag">Project 04 — Observation Tower</div>
+    <div class="sec-bar"></div>
+    <div class="sec-title">Sky<br>Catcher</div>
+    <div class="sec-desc">Exploring two architectural verbs — swirling and folding — as a means to generate spatial and formal concepts. Each verb interpreted through conceptual models, investigating how movement and geometry could shape an observation tower.</div>
+    <span class="pn l" style="color:rgba(255,255,255,.2)">40</span>
+  </div>`,
+
+  // 41 - Arch verbs
+  `<div class="pg cnt">
+    <div class="pg-label">Architectural Verbs</div>
+    <div class="pg-proj">Sky Catcher</div>
+    <div class="cnt-h">Folding</div>
+    <div class="cnt-div"></div>
+    <div class="cnt-body">
+      Investigates how flat surfaces can be transformed into structured, three-dimensional forms. In architecture, it enables the creation of angular spaces, directional planes, and clearly defined enclosures. In this project, the concept of folding was applied to shape the tower's rigid form.
+    </div>
+    <div class="cnt-div"></div>
+    <div class="cnt-h">Swirling</div>
+    <div class="cnt-body" style="margin-top:8px">
+      A dynamic rotational force that generates spiralling, continuous movement through the tower's vertical axis — expressed through the curved ramps and observation deck rotation.
+    </div>
+    <div class="cnt-div"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;height:22%">
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Fold Study</div></div>
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Swirl Study</div></div>
+    </div>
+    <span class="pn r">41</span>
+  </div>`,
+
+  // 42 - Appendix
+  `<div class="pg cnt alt">
+    <div class="pg-label">Appendix</div>
+    <div class="pg-proj">Sky Catcher</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;height:80%">
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Model 01</div></div>
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Model 02</div></div>
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Model 03</div></div>
+      <div class="drw"><div class="drw-grid"></div><div class="drw-label">Model 04</div></div>
+    </div>
+    <span class="pn r">42</span>
+  </div>`,
+
+  // 43 - Final Physical Model
+  `<div class="pg cnt">
+    <div class="pg-label">Final Physical Model</div>
+    <div class="pg-proj">Sky Catcher</div>
+    <div class="cnt-body" style="font-size:10px">
+      The Sky-Catcher is a conceptual observation tower designed as a dramatic and sculptural intervention that merges seamlessly with the coastal cliffs by employing the architectural verbs swirling and folding to shape both its form and spatial experience. The swirling element is expressed through a dynamic helical ascent.
+    </div>
+    <div class="cnt-div"></div>
+    <div class="drw" style="height:55%">
+      <div class="drw-grid"></div>
+      <svg width="60%" height="60%" viewBox="0 0 160 260" style="position:absolute;opacity:.2">
+        <!-- Tower form -->
+        <path d="M60 240 L50 180 Q40 140 55 100 Q65 60 80 20 Q95 60 105 100 Q120 140 110 180 L100 240 Z" fill="none" stroke="#333" stroke-width="1"/>
+        <path d="M55 100 Q75 80 95 100" fill="none" stroke="#333" stroke-width="0.8" stroke-dasharray="3,3"/>
+        <path d="M52 130 Q78 108 108 130" fill="none" stroke="#333" stroke-width="0.7" stroke-dasharray="3,3"/>
+        <path d="M50 160 Q80 142 110 160" fill="none" stroke="#333" stroke-width="0.7" stroke-dasharray="3,3"/>
+        <path d="M50 180 Q80 165 110 180" fill="none" stroke="#333" stroke-width="0.8"/>
+        <ellipse cx="80" cy="240" rx="30" ry="6" fill="none" stroke="#333" stroke-width="0.6"/>
+      </svg>
+      <div class="drw-label">Tower — Final Model</div>
+    </div>
+    <span class="pn r">43</span>
+  </div>`,
+
+  // 44 - Back cover
+  `<div class="pg bcov">
+    <div class="cov-grid" style="opacity:.3"></div>
+    <div class="bcov-line"></div>
+    <div class="bcov-name">ADAM ALI IMRAN</div>
+    <div class="bcov-tag">Architecture Portfolio · 2026</div>
+  </div>`,
+];
+
+// TOC data: [label, spreadIndex]
+const TOC = [
+  ['Cover', 0],
+  ['Curriculum Vitae', 1],
+  ['Education', 2],
+  ['Table of Contents', 2],
+  ['Project 01 — Under The Cloud', 3],
+  ['Elevation', 4],
+  ['Section & Roof Plan', 5],
+  ['Interior', 5],
+  ['Exterior', 6],
+  ['Physical Model', 7],
+  ['Project 02 — Botanical Education Centre', 7],
+  ['Site Context', 8],
+  ['The Project', 9],
+  ['Roof Plan', 10],
+  ['Elevation & Section', 11],
+  ['Physical Model', 14],
+  ['Project 05 — Micro Lab', 14],
+  ['Site Analysis & Concept', 15],
+  ['Floor Plan', 16],
+  ['Physical Model', 18],
+  ['Project 03 — Aquascape', 18],
+  ['Translation & Manipulation', 19],
+  ['Final Model', 20],
+  ['Project 04 — Sky Catcher', 20],
+  ['Architectural Verbs', 21],
+  ['Final Physical Model', 22],
+];
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let spread = 0;          // current spread index (0-based)
+let animating = false;
+const TOTAL_SPREADS = Math.ceil(PAGES.length / 2);   // 22
+
+function pageLeft(s)  { return PAGES[s * 2]     || ''; }
+function pageRight(s) { return PAGES[s * 2 + 1] || ''; }
+
+const lp = document.getElementById('lp');
+const rp = document.getElementById('rp');
+const flipper = document.getElementById('flipper');
+const ffront  = document.getElementById('ffront');
+const fback   = document.getElementById('fback');
+
+function renderSpread(s) {
+  const book = document.getElementById('book');
+  book.classList.remove('solo-right','solo-left');
+  if (s === 0) book.classList.add('solo-right');
+  else if (s === TOTAL_SPREADS - 1) book.classList.add('solo-left');
+  lp.innerHTML = pageLeft(s) + '<div id="lcorner" onclick="prevSpread()"></div>';
+  rp.innerHTML = pageRight(s) + '<div id="corner" onclick="nextSpread()"></div>';
+  // re-bind toc clicks inside pages
+  document.querySelectorAll('[onclick^="gotoSpread"]').forEach(el => {
+    const m = el.getAttribute('onclick').match(/gotoSpread\((\d+)\)/);
+    if (m) el.onclick = () => gotoSpread(parseInt(m[1]));
+  });
+  updateUI();
+}
+
+function updateUI() {
+  let pgText;
+  if (spread === 0) pgText = '1 / 44';
+  else if (spread === TOTAL_SPREADS - 1) pgText = '44 / 44';
+  else pgText = `${spread * 2}–${spread * 2 + 1} / 44`;
+  document.getElementById('page-indicator').textContent = pgText;
+  document.getElementById('prog-fill').style.width =
+    ((spread + 1) / TOTAL_SPREADS * 100) + '%';
+}
+
+function nextSpread() {
+  if (animating || spread >= TOTAL_SPREADS - 1) return;
+  const next = spread + 1;
+  animate(next, 'forward');
+}
+
+function prevSpread() {
+  if (animating || spread <= 0) return;
+  const prev = spread - 1;
+  // simple instant prev (no reverse animation for brevity)
+  spread = prev;
+  renderSpread(spread);
+}
+
+function gotoSpread(s) {
+  if (animating) return;
+  s = Math.max(0, Math.min(TOTAL_SPREADS - 1, s));
+  if (s === spread) { toggleToc(); return; }
+  spread = s;
+  renderSpread(spread);
+  if (document.getElementById('toc-overlay').classList.contains('open')) toggleToc();
+}
+
+function animate(next, dir) {
+  animating = true;
+
+  // Set flipper front = current right page
+  ffront.innerHTML = pageRight(spread);
+  // Set flipper back = next left page (mirrored — backface so it's reflected)
+  fback.innerHTML  = pageLeft(next);
+
+  // Pre-load next right page behind left page (hidden)
+  // Show flipper
+  flipper.style.display = 'block';
+  flipper.classList.remove('go');
+
+  // Trigger flip
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      flipper.classList.add('go');
+    });
+  });
+
+  flipper.addEventListener('transitionend', function handler() {
+    flipper.removeEventListener('transitionend', handler);
+    spread = next;
+    renderSpread(spread);
+    flipper.classList.remove('go');
+    flipper.style.display = 'none';
+    animating = false;
+  }, { once: true });
+}
+
+// ─── TOC ─────────────────────────────────────────────────────────────────────
+function buildToc() {
+  const container = document.getElementById('toc-entries');
+  TOC.forEach(([label, s], i) => {
+    const row = document.createElement('div');
+    row.className = 'toc-row';
+    row.innerHTML = `
+      <span class="toc-row-num">${String(i+1).padStart(2,'0')}</span>
+      <span class="toc-row-name">${label}</span>
+      <span class="toc-row-dots"></span>
+      <span class="toc-row-pg">${s === 0 ? 1 : s * 2}</span>`;
+    row.onclick = () => gotoSpread(s);
+    container.appendChild(row);
+  });
+}
+
+function toggleToc() {
+  document.getElementById('toc-overlay').classList.toggle('open');
+}
+
+// ─── Fullscreen ───────────────────────────────────────────────────────────────
+function toggleFS() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+// ─── Responsive book size ─────────────────────────────────────────────────────
+function resize() {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight - 50; // account for ui bar
+  // PDF pages are square (1784×1784 pt)
+  let bw = Math.min(vw / 2 - 20, 800);
+  let bh = bw; // 1:1
+  if (bh > vh - 20) { bh = vh - 20; bw = bh; }
+  document.documentElement.style.setProperty('--bw', bw + 'px');
+  document.documentElement.style.setProperty('--bh', bh + 'px');
+}
+
+// ─── Keyboard ────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'PageDown') nextSpread();
+  if (e.key === 'ArrowLeft'  || e.key === 'PageUp')   prevSpread();
+  if (e.key === 't' || e.key === 'T') toggleToc();
+  if (e.key === 'Escape') {
+    const ov = document.getElementById('toc-overlay');
+    if (ov.classList.contains('open')) toggleToc();
+  }
+  if (e.key === 'f' || e.key === 'F') toggleFS();
+});
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+window.addEventListener('resize', resize);
+resize();
+buildToc();
+renderSpread(0);
+flipper.style.display = 'none';
+</script>
+</body>
+</html>
